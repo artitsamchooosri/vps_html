@@ -7,6 +7,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from fastapi.responses import JSONResponse
+from mysqlcon import Mysqlcon
 import pymongo
 import pyodbc
 import gspread
@@ -23,6 +24,7 @@ class ReData:
 
         self.mydb = myclient["ddc"]
         self.google_client=connect_googlesheet()
+        self.mysqlcon=Mysqlcon()
     def sqlcon(self,apiinfo):
         record = self.mydb[apiinfo].find_one()
         Server=record["server"]
@@ -196,4 +198,47 @@ class ReData:
         worksheet1 = gs.worksheet('Record')
         worksheet1.clear()
         set_with_dataframe(worksheet=worksheet1, dataframe=df_record,
+                           include_index=False, include_column_header=True, resize=True)
+    def Re_Record_Com_Sale(self):
+        gs = self.google_client.open_by_key("1rDw93Ptf6jXvvO_4fvlFp7yCbPu3HcJWnC9ecZWyDZ4")
+
+        record = self.mydb["incentivesale_dia_record_saledo"].find_one()
+        sql=record["sql"]
+        df_record =self.mysqlcon.querydata(sql)
+        df_record["d_o_date"] =pd.to_datetime(df_record['d_o_date']).apply(lambda x: x.date().strftime("%d-%m-%Y"))
+        df_record["d_o_due"] =pd.to_datetime(df_record['d_o_due']).apply(lambda x: x.date().strftime("%d-%m-%Y"))
+
+        worksheet_dia_record_saledo = gs.worksheet('dia_record_saledo')
+        worksheet_dia_record_saledo.clear()
+        set_with_dataframe(worksheet=worksheet_dia_record_saledo, dataframe=df_record,
+                           include_index=False, include_column_header=True, resize=True)
+        
+        record = self.mydb["incentivesale_dia_record_salebill"].find_one()
+        sql=record["sql"]
+        df_record =self.mysqlcon.querydata(sql)
+        df_record["d_o_date"] = df_record["d_o_date"].fillna("01-01-1970")
+        df_record["d_o_due"] = df_record["d_o_due"].fillna("01-01-1970")
+        df_record["ref_date"] = df_record["ref_date"].fillna("01-01-1970")
+        df_record["d_o_date"] =pd.to_datetime(df_record['d_o_date']).apply(lambda x: x.date().strftime("%d-%m-%Y"))
+        df_record["d_o_due"] =pd.to_datetime(df_record['d_o_due']).apply(lambda x: x.date().strftime("%d-%m-%Y"))
+        df_record["ref_date"] =pd.to_datetime(df_record['ref_date']).apply(lambda x: x.date().strftime("%d-%m-%Y"))
+
+        worksheet_dia_record_salebill = gs.worksheet('dia_record_salebill')
+
+        worksheet_dia_record_salebill.clear()
+        set_with_dataframe(worksheet=worksheet_dia_record_salebill, dataframe=df_record,
+                           include_index=False, include_column_header=True, resize=True)
+
+        sql_conn=self.sqlcon("apiinfo")
+        df_record = self.query_datatable("incentivesale_d365_record_sale", sql_conn)
+        worksheet = gs.worksheet('ddc_record_salebill')
+        worksheet.clear()
+        set_with_dataframe(worksheet=worksheet, dataframe=df_record,
+                           include_index=False, include_column_header=True, resize=True)
+
+
+        df_record = self.query_datatable("incentivesale_d365_record_saleorder", sql_conn)
+        worksheet = gs.worksheet('ddc_record_saleorder')
+        worksheet.clear()
+        set_with_dataframe(worksheet=worksheet, dataframe=df_record,
                            include_index=False, include_column_header=True, resize=True)

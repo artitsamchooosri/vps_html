@@ -85,6 +85,11 @@ def redata():
     Objradata.onhand_by_flow()
     Objradata.Re_Record_PR()
     return {"Status": "OK"}
+@app.get("/redata-google-comsale")
+def redata_comsale():
+    Objradata = ReData()
+    Objradata.Re_Record_Com_Sale()
+    return {"Status": "OK"}
 @app.get("/redata-web")
 def redata():
     Objradata = ReData()
